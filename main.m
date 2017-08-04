@@ -22,4 +22,4 @@ res_optic = 1.25e-9; % resolution of the interferometer [m]
 speed_optic = 0.4;  % max. measurable movement [m/s]
 
 % open simulink model
-sim('dwa');
+% sim('dwa');
