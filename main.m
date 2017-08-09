@@ -5,8 +5,10 @@ clear all
 close all
 clc
 
+% overall control parameter
+alpha = 0.5;      % 0: coarse actuator tracks r; 1: tracks x_f
+
 % declare parameters
-global m_f m_c k_af k_ac k c q1 q2 n fs
 m_f = 0.7e-3;   % fine actuator mass [kg]
 m_c = 8.5;      % coarse actuator mass [kg]
 
@@ -18,6 +20,7 @@ c = 3.5e-2;     % damping factor [N/(m/s)]
 
 F_max = 250;    % max. actuation force [N]
 xf_max = 1e-3;  % max. fine actuation range [m]
+Dc_Max = 40.2;  % max. measured friction [N]
 
 res_optic = 1.25e-9; % resolution of the interferometer [m]
 speed_optic = 0.4;  % max. measurable movement [m/s]
@@ -31,10 +34,33 @@ fs= 20e3;       % sampling frequency of controller
 
 % control params
 S = [-1.7e6 2.28e4 225 1.91 2.71];
-B_au = [0 0 0 440 0]';
+
+% state space model of coarse actuator
+A_c = [0 1; 0 0];
+B_cu = [0; k_ac/m_c];
+B_cd = [0; 1/m_c];
+
+% state space model of low pass filter
+A_lpf = [-284 -370; 370 0];
+B_lpf = [440; 0];
+C_lpf = [0 0.596];
+
+% state space combined of coarse actuator and lpf
+A_a = [0            -1 0        0   0;...
+       zeros(2,1)    A_c        B_cu*C_lpf;...
+       zeros(2,1)   zeros(2)    A_lpf];
+B_au = [0; 0; 0; B_lpf];
 B_ar = [1 0 0 0 0]';
-B_ad = [0 0 1/m_c 0 0]';
-ksw_min = abs(inv(S*B_au)*s*B_ad)*40.2;
+B_ad = [0; B_cd; 0; 0];
+
+k_sw1 = 3;      % factor of relay function in switch control
+k_sw2 = 0.1;
+k_sigm =0.185;  % factor of sigmoid function in switch control
+
+% Parmeter for trajectory
+L = 0.1;        % travel distance [m]
+T = 0.55;       % travel time for traj2 [s]
+T_s = 5;        % travel time for traj3 [s] 
 
 % open simulink model
 % sim('dwa');
