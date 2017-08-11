@@ -32,8 +32,24 @@ n = 1e-18;      % measurement noise variance for x_f [m^2]
 
 fs= 20e3;       % sampling frequency of controller
 
-% control params
-S = [-1.7e6 2.28e4 225 1.91 2.71];
+% state space model of dual stage actuator
+A = [0,         1,      0,     0; ...
+    -k/m_f, -c/m_f, k/m_f, c/m_f;...
+    0,          0,      0,     1;...
+    0,          0,      0,     0];
+B = [0,         0;...
+    k_af/m_f,   0;...
+    0,          0;...
+    0,      k_ac/m_c];
+C = [1 0 0 0];
+D = [0 0];
+dwa_ss = ss(A,B,C,D,'statename',{'xf' 'xf_dot' 'xc' 'xc_dot'},'inputname',{'uf' 'uc'},'outputname','xf');
+
+% discret kalman filter
+Qn = [q1 0; 0 q2];
+Rn = n;
+Ts = 1/fs;
+% [kest,~,~,~,~] = kalmd(dwa_ss,Qn,Rn,Ts);
 
 % state space model of coarse actuator
 A_c = [0 1; 0 0];
@@ -45,7 +61,8 @@ A_lpf = [-284 -370; 370 0];
 B_lpf = [440; 0];
 C_lpf = [0 0.596];
 
-% state space combined of coarse actuator and lpf
+% state space model of augmented system(consist of coarse actuator, lpf, 
+% integral of coarse actuator position error)
 A_a = [0            -1 0        0   0;...
        zeros(2,1)    A_c        B_cu*C_lpf;...
        zeros(2,1)   zeros(2)    A_lpf];
@@ -53,6 +70,10 @@ B_au = [0; 0; 0; B_lpf];
 B_ar = [1 0 0 0 0]';
 B_ad = [0; B_cd; 0; 0];
 
+% parameters for equivalent control
+S = [-1.7e6 2.28e4 225 1.91 2.71];
+
+% parameters for switch control
 k_sw1 = 3;      % factor of relay function in switch control
 k_sw2 = 0.1;
 k_sigm =0.185;  % factor of sigmoid function in switch control
